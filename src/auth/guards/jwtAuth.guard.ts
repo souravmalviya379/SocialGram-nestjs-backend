@@ -10,7 +10,7 @@ import { Request } from 'express';
 import { UserService } from 'src/user/user.service';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
+export class JwtAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
