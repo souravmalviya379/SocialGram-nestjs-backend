@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -30,8 +31,12 @@ export class JwtAuthGuard implements CanActivate {
       });
       const { userId } = payload;
       const user = await this.userService.findById(userId);
+      if (!user) {
+        throw new NotFoundException('User does not exist');
+      }
       request.user = user;
-    } catch {
+    } catch (error) {
+      console.log('Error while authenticating user : ', error);
       throw new UnauthorizedException('Unauthorized');
     }
     return true;
