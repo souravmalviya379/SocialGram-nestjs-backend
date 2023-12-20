@@ -7,6 +7,8 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { PostModule } from './post/post.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -17,6 +19,9 @@ import { PostModule } from './post/post.module';
       isGlobal: true,
       cache: true,
       expandVariables: true,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '../..', 'public'),
     }),
     MongooseModule.forRoot(process.env.DB_URI),
     JwtModule,

@@ -5,9 +5,11 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from './schemas/user.schema';
+import { User, UserDocument } from './schemas/user.schema';
 import mongoose from 'mongoose';
 import { RegisterUserDto } from './dtos/register-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import removeFile from 'utils/remove-file';
 
 @Injectable()
 export class UserService {
@@ -30,7 +32,7 @@ export class UserService {
     });
   }
 
-  async create(registerUserDto: RegisterUserDto) {
+  async create(registerUserDto: RegisterUserDto, file: any) {
     try {
       const {
         name,
@@ -53,7 +55,7 @@ export class UserService {
         throw new ConflictException('User already exists');
       }
 
-      const newUser = await this.userModel.create({
+      const newUser = new this.userModel({
         name,
         email,
         username,
@@ -62,6 +64,12 @@ export class UserService {
         password,
       });
 
+      if (file) {
+        console.log('file', file);
+        newUser.image = `uploads/userImages/${file.filename}`;
+      }
+
+      await newUser.save();
       return {
         message: 'User registered successfully',
         newUser,
@@ -76,6 +84,35 @@ export class UserService {
         console.log('Error while creating User : ', error);
         throw new InternalServerErrorException('Something went wrong');
       }
+    }
+  }
+
+  async edit(
+    user: UserDocument,
+    updateUserDto: UpdateUserDto,
+    file: Express.Multer.File,
+  ) {
+    try {
+      for (const update in updateUserDto) {
+        user[update] = updateUserDto[update];
+      }
+      if (file) {
+        if (user.image) {
+          removeFile(`public/${user.image}`);
+        }
+        user.image = `uploads/userImages/${file.filename}`;
+      }
+      await user.save();
+
+      return {
+        message: 'User profile updated successfully',
+        user,
+      };
+    } catch (error) {
+      console.log('Error while editing user data : ', error);
+      throw new InternalServerErrorException(
+        'Something went wrong while updating user data',
+      );
     }
   }
 }
