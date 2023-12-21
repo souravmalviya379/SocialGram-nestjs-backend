@@ -10,6 +10,7 @@ import mongoose from 'mongoose';
 import { RegisterUserDto } from './dtos/register-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import removeFile from 'utils/remove-file';
+import { USER_IMAGE_PATH } from 'utils/user-Image-upload.config';
 
 @Injectable()
 export class UserService {
@@ -66,7 +67,7 @@ export class UserService {
 
       if (file) {
         console.log('file', file);
-        newUser.image = `uploads/userImages/${file.filename}`;
+        newUser.image = `${USER_IMAGE_PATH}/${file.filename}`;
       }
 
       await newUser.save();
@@ -100,7 +101,7 @@ export class UserService {
         if (user.image) {
           removeFile(`public/${user.image}`);
         }
-        user.image = `uploads/userImages/${file.filename}`;
+        user.image = `${USER_IMAGE_PATH}/${file.filename}`;
       }
       await user.save();
 
