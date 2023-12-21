@@ -9,6 +9,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { PostModule } from './post/post.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { LikeController } from './like/like.controller';
+import { LikeService } from './like/like.service';
+import { LikeModule } from './like/like.module';
 
 @Module({
   imports: [
@@ -26,9 +29,10 @@ import { join } from 'path';
     MongooseModule.forRoot(process.env.DB_URI),
     JwtModule,
     PostModule,
+    LikeModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, LikeController],
+  providers: [AppService, LikeService],
   exports: [ConfigModule],
 })
 export class AppModule {}
