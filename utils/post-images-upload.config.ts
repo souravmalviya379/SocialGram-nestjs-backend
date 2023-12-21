@@ -2,12 +2,13 @@
 import { diskStorage } from 'multer';
 import { UnprocessableEntityException } from '@nestjs/common';
 
-export const USER_IMAGE_PATH = 'uploads/userImages';
+export const MAX_IMAGES_COUNT = 10;
+export const POST_IMAGE_PATH = 'uploads/postImages';
 
-export const userImageUploadOptions = {
+export const postImageUploadOptions = {
   limits: {
     fileSize: 10 * 1024 * 1024,
-    files: 1,
+    files: MAX_IMAGES_COUNT,
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.match(/\jpg|jpeg|png|svg$/)) {
@@ -22,9 +23,9 @@ export const userImageUploadOptions = {
     }
   },
   storage: diskStorage({
-    destination: `public/${USER_IMAGE_PATH}`,
+    destination: `public/${POST_IMAGE_PATH}`,
     filename(req, file, callback) {
-      const uniqueFileName = `userImage-${Date.now()}.${
+      const uniqueFileName = `postImage-${Date.now()}.${
         file.mimetype.split('/')[1]
       }`;
       callback(null, uniqueFileName);
