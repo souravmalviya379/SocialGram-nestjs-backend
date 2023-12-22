@@ -9,13 +9,14 @@ import mongoose from 'mongoose';
 import { CreatePostDto } from './dtos/create-post.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Post } from './schemas/post.schema';
-import { UserService } from 'src/user/user.service';
 import {
   MAX_IMAGES_COUNT,
   POST_IMAGE_PATH,
 } from 'utils/post-images-upload.config';
 import removeFile from 'utils/remove-file';
 import { DeletePostImagesDto } from './dtos/delete-postImage.dto';
+import { UserService } from 'src/user/user.service';
+import { PaginationQueryDto } from 'src/common/dtos/paginationQuery.dto';
 
 @Injectable()
 export class PostService {
@@ -24,6 +25,161 @@ export class PostService {
     private postModel: mongoose.Model<Post>,
     private userService: UserService,
   ) {}
+
+  async getAll(paginationQueryDto: PaginationQueryDto) {
+    const { page, limit } = paginationQueryDto;
+    try {
+      const posts = await this.postModel.aggregate([
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  username: 1,
+                  image: 1,
+                },
+              },
+            ],
+            as: 'user',
+          },
+        },
+        {
+          $unwind: {
+            path: '$user',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+      ]);
+
+      const totalPosts = await this.postModel.countDocuments();
+      const totalPages = Math.ceil(totalPosts / limit);
+      return {
+        posts,
+        totalPosts,
+        page,
+        limit,
+        totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
+      };
+    } catch (error) {
+      console.log('Error while fetching all posts : ', error);
+      throw new InternalServerErrorException(
+        'Something went wrong while fetching posts',
+      );
+    }
+  }
+
+  async findByUser(
+    userId: mongoose.Types.ObjectId | string,
+    paginationQueryDto: PaginationQueryDto,
+  ) {
+    try {
+      const { page, limit } = paginationQueryDto;
+      const existingUser = await this.userService.findById(userId);
+      if (!existingUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      const userPosts = await this.postModel.aggregate([
+        {
+          $match: {
+            user: new mongoose.Types.ObjectId(userId),
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  username: 1,
+                  image: 1,
+                },
+              },
+            ],
+            as: 'user',
+          },
+        },
+        {
+          $unwind: {
+            path: '$user',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'postlikes',
+            localField: '_id',
+            foreignField: 'post',
+            pipeline: [
+              {
+                $lookup: {
+                  from: 'users',
+                  foreignField: '_id',
+                  localField: 'user',
+                  pipeline: [
+                    {
+                      $project: {
+                        name: true,
+                        username: true,
+                        image: true,
+                      },
+                    },
+                  ],
+                  as: 'user',
+                },
+              },
+              {
+                $unwind: {
+                  path: '$user',
+                  preserveNullAndEmptyArrays: true,
+                },
+              },
+            ],
+            as: 'likes ',
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+      ]);
+
+      const totalPosts = await this.postModel.countDocuments();
+      const totalPages = Math.ceil(totalPosts / limit);
+      return {
+        userPosts,
+        totalPosts,
+        page,
+        limit,
+        totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else {
+        console.log('Error while fetching user posts : ', error);
+        throw new InternalServerErrorException(
+          'Something went wrong while fetching posts',
+        );
+      }
+    }
+  }
+
+  async getById(postId: mongoose.Types.ObjectId | string) {
+    const post = await this.postModel.findById(postId);
+    return post;
+  }
 
   async create(
     userId: mongoose.Types.ObjectId | string,
@@ -73,8 +229,7 @@ export class PostService {
         );
       }
 
-      const { content } = editPostDto;
-      post.content = content;
+      post.content = editPostDto.content;
       await post.save();
 
       return { message: 'Post content updated successfully', post };

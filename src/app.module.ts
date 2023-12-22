@@ -10,7 +10,6 @@ import { PostModule } from './post/post.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { LikeController } from './like/like.controller';
-import { LikeService } from './like/like.service';
 import { LikeModule } from './like/like.module';
 
 @Module({
@@ -32,7 +31,7 @@ import { LikeModule } from './like/like.module';
     LikeModule,
   ],
   controllers: [AppController, LikeController],
-  providers: [AppService, LikeService],
+  providers: [AppService],
   exports: [ConfigModule],
 })
 export class AppModule {}
