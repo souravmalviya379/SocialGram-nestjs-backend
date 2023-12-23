@@ -2,9 +2,12 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   UploadedFiles,
   UseGuards,
@@ -18,8 +21,10 @@ import {
   MAX_IMAGES_COUNT,
   postImageUploadOptions,
 } from 'utils/post-images-upload.config';
-import { PostIdDto } from './dtos/postId.dto';
+import { PostIdDto } from '../common/dtos/postId.dto';
 import { DeletePostImagesDto } from './dtos/delete-postImage.dto';
+import { UserIdDto } from 'src/common/dtos/userId.dto';
+import { PaginationQueryDto } from 'src/common/dtos/paginationQuery.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('post')
@@ -36,6 +41,31 @@ export class PostController {
     @Body() createPostDto: CreatePostDto,
   ) {
     return this.postService.create(req.user._id, createPostDto, files);
+  }
+
+  @Get('posts')
+  getAllPosts(@Query() paginationQueryDto: PaginationQueryDto) {
+    return this.postService.getAll(paginationQueryDto);
+  }
+
+  @Get('my')
+  getMyPosts(@Request() req, @Query() paginationQueryDto: PaginationQueryDto) {
+    return this.postService.findByUser(req.user._id, paginationQueryDto);
+  }
+
+  @Get('user/:userId')
+  getUserPosts(
+    @Param() userIdDto: UserIdDto,
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    const { userId } = userIdDto;
+    return this.postService.findByUser(userId, paginationQueryDto);
+  }
+
+  @Get('/:postId')
+  getPostById(@Param() postIdDto: PostIdDto) {
+    const { postId } = postIdDto;
+    return this.postService.getById(postId);
   }
 
   @Patch('edit-content/:postId')
