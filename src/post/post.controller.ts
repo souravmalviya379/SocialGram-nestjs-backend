@@ -20,15 +20,21 @@ import {
   MAX_IMAGES_COUNT,
   postImageUploadOptions,
 } from 'utils/post-images-upload.config';
-import { PostIdDto } from '../common/dtos/postId.dto';
+import { PostIdDto } from './dtos/postId.dto';
 import { DeletePostImagesDto } from './dtos/delete-postImage.dto';
 import { UserIdDto } from 'src/common/dtos/userId.dto';
 import { PaginationQueryDto } from 'src/common/dtos/paginationQuery.dto';
+import { LikeService } from './like.service';
+import { CommentService } from './comment.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('post')
 export class PostController {
-  constructor(private postService: PostService) {}
+  constructor(
+    private postService: PostService,
+    private likeService: LikeService,
+    private commentService: CommentService,
+  ) {}
 
   @Post('create')
   @UseInterceptors(
@@ -40,6 +46,12 @@ export class PostController {
     @Body() createPostDto: CreatePostDto,
   ) {
     return this.postService.create(req.user._id, createPostDto, files);
+  }
+
+  @Post('/:postId/like')
+  likePost(@Request() req, @Param() postIdDto: PostIdDto) {
+    const { postId } = postIdDto;
+    return this.likeService.likePost(req.user._id, postId);
   }
 
   @Get('posts')
@@ -65,6 +77,23 @@ export class PostController {
   getPostById(@Param() postIdDto: PostIdDto) {
     const { postId } = postIdDto;
     return this.postService.getById(postId);
+  }
+
+  @Get('/:postId/likes')
+  getPostLikes(
+    @Request() req,
+    @Param() postIdDto: PostIdDto,
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    const { postId } = postIdDto;
+    return this.likeService.getPostLikes(postId, paginationQueryDto);
+  }
+
+  @Get('/:postId/likes-count')
+  async getPostLikesCount(@Param() postIdDto: PostIdDto) {
+    const { postId } = postIdDto;
+    const likesCount = await this.likeService.getPostLikesCount(postId);
+    return { postLikesCount: likesCount };
   }
 
   @Patch('edit-content/:postId')

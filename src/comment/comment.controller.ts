@@ -9,9 +9,9 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { CommentService } from './comment.service';
+import { CommentService } from '../post/comment.service';
 import { PostIdDto } from 'src/common/dtos/postId.dto';
-import { CreateCommentDto } from './dtos/create-comment.dto';
+import { CreateCommentDto } from '../post/dtos/create-comment.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwtAuth.guard';
 import { CommentIdDto } from 'src/common/dtos/commentId.dto';
 
