@@ -130,6 +130,9 @@ export class LikeService {
         {
           $limit: limit,
         },
+        {
+          $sort: { createdAt: -1 },
+        },
       ]);
 
       const totalLikesCount = await this.getPostLikesCount(postId);

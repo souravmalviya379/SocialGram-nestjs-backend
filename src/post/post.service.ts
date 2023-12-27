@@ -26,48 +26,112 @@ export class PostService {
     private userService: UserService,
   ) {}
 
-  async getAll(paginationQueryDto: PaginationQueryDto) {
+  async getFilteredPosts(
+    filterOptions: object,
+    paginationQueryDto: PaginationQueryDto,
+  ) {
     const { page, limit } = paginationQueryDto;
-    try {
-      const posts = await this.postModel.aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user',
-            foreignField: '_id',
-            pipeline: [
-              {
-                $project: {
-                  name: 1,
-                  username: 1,
-                  image: 1,
-                },
+    const posts = await this.postModel.aggregate([
+      {
+        $match: filterOptions,
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          pipeline: [{ $project: { name: 1, username: 1, image: 1 } }],
+          as: 'user',
+        },
+      },
+      {
+        $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $lookup: {
+          from: 'postlikes',
+          localField: '_id',
+          foreignField: 'post',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'users',
+                foreignField: '_id',
+                localField: 'user',
+                pipeline: [
+                  {
+                    $project: { name: true, username: true, image: true },
+                  },
+                ],
+                as: 'user',
               },
-            ],
-            as: 'user',
-          },
+            },
+            {
+              $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+          ],
+          as: 'likes',
         },
-        {
-          $unwind: {
-            path: '$user',
-            preserveNullAndEmptyArrays: true,
-          },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: '_id',
+          foreignField: 'post',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                pipeline: [
+                  { $project: { name: true, image: true, username: true } },
+                ],
+                as: 'user',
+              },
+            },
+            {
+              $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+          ],
+          as: 'comments',
         },
-        { $skip: (page - 1) * limit },
-        { $limit: limit },
-      ]);
+      },
+      {
+        $addFields: {
+          totalLikes: { $size: '$likes' },
+          totalComments: { $size: '$comments' },
+          likes: { $slice: ['$likes', 3] },
+          comments: { $slice: ['$comments', 2] },
+        },
+      },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+    ]);
 
-      const totalPosts = await this.postModel.countDocuments();
-      const totalPages = Math.ceil(totalPosts / limit);
-      return {
-        posts,
-        totalPosts,
-        page,
-        limit,
-        totalPages,
-        hasPreviousPage: page > 1,
-        hasNextPage: page < totalPages,
-      };
+    const totalPosts = await this.postModel.countDocuments();
+    const totalPages = Math.ceil(totalPosts / limit);
+    return {
+      posts,
+      totalPosts,
+      page,
+      limit,
+      totalPages,
+      hasPreviousPage: page > 1,
+      hasNextPage: page < totalPages,
+    };
+  }
+
+  async getAll(paginationQueryDto: PaginationQueryDto) {
+    try {
+      const filterOptions = {};
+      return this.getFilteredPosts(filterOptions, paginationQueryDto);
     } catch (error) {
       console.log('Error while fetching all posts : ', error);
       throw new InternalServerErrorException(
@@ -81,89 +145,16 @@ export class PostService {
     paginationQueryDto: PaginationQueryDto,
   ) {
     try {
-      const { page, limit } = paginationQueryDto;
       const existingUser = await this.userService.findById(userId);
       if (!existingUser) {
         throw new NotFoundException('User not found');
       }
 
-      const userPosts = await this.postModel.aggregate([
-        {
-          $match: {
-            user: new mongoose.Types.ObjectId(userId),
-          },
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user',
-            foreignField: '_id',
-            pipeline: [
-              {
-                $project: {
-                  name: 1,
-                  username: 1,
-                  image: 1,
-                },
-              },
-            ],
-            as: 'user',
-          },
-        },
-        {
-          $unwind: {
-            path: '$user',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        {
-          $lookup: {
-            from: 'postlikes',
-            localField: '_id',
-            foreignField: 'post',
-            pipeline: [
-              {
-                $lookup: {
-                  from: 'users',
-                  foreignField: '_id',
-                  localField: 'user',
-                  pipeline: [
-                    {
-                      $project: {
-                        name: true,
-                        username: true,
-                        image: true,
-                      },
-                    },
-                  ],
-                  as: 'user',
-                },
-              },
-              {
-                $unwind: {
-                  path: '$user',
-                  preserveNullAndEmptyArrays: true,
-                },
-              },
-            ],
-            as: 'likes ',
-          },
-        },
-        { $skip: (page - 1) * limit },
-        { $limit: limit },
-      ]);
-
-      const totalPosts = await this.postModel.countDocuments();
-      const totalPages = Math.ceil(totalPosts / limit);
-      return {
-        userPosts,
-        totalPosts,
-        page,
-        limit,
-        totalPages,
-        hasPreviousPage: page > 1,
-        hasNextPage: page < totalPages,
+      const filterOptions = {
+        user: new mongoose.Types.ObjectId(userId),
       };
+
+      return this.getFilteredPosts(filterOptions, paginationQueryDto);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
