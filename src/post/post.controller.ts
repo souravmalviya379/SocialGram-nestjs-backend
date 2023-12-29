@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -26,6 +27,8 @@ import { UserIdDto } from 'src/common/dtos/userId.dto';
 import { PaginationQueryDto } from 'src/common/dtos/paginationQuery.dto';
 import { LikeService } from './like.service';
 import { CommentService } from './comment.service';
+import { CommentIdDto } from './dtos/commentId.dto';
+import { CreateCommentDto } from './dtos/create-comment.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('post')
@@ -48,10 +51,40 @@ export class PostController {
     return this.postService.create(req.user._id, createPostDto, files);
   }
 
+  @Post('comment/:commentId/like')
+  async likeComment(@Request() req, @Param() commentIdDto: CommentIdDto) {
+    const { commentId } = commentIdDto;
+    return this.likeService.likeComment(req.user._id, commentId);
+  }
+
+  @Post('comment/:commentId/reply')
+  replyComment(
+    @Request() req,
+    @Param() commentIdDto: CommentIdDto,
+    @Body() createReplyDto: CreateCommentDto,
+  ) {
+    const { commentId } = commentIdDto;
+    return this.commentService.createReply(
+      req.user._id,
+      commentId,
+      createReplyDto,
+    );
+  }
+
   @Post('/:postId/like')
   likePost(@Request() req, @Param() postIdDto: PostIdDto) {
     const { postId } = postIdDto;
     return this.likeService.likePost(req.user._id, postId);
+  }
+
+  @Post('/:postId/comment')
+  createComment(
+    @Request() req,
+    @Param() postIdDto: PostIdDto,
+    @Body() createCommentDto: CreateCommentDto,
+  ) {
+    const { postId } = postIdDto;
+    return this.commentService.create(req.user._id, postId, createCommentDto);
   }
 
   @Get('posts')
@@ -72,9 +105,30 @@ export class PostController {
     const { userId } = userIdDto;
     return this.postService.findByUser(userId, paginationQueryDto);
   }
+  @Get('comment/:commentId/likes')
+  async getCommentLikes(
+    @Param() commentIdDto: CommentIdDto,
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    const { commentId } = commentIdDto;
+    return this.likeService.getCommentLikes(commentId, paginationQueryDto);
+  }
+
+  @Get('comment/:commentId/likes-count')
+  async getCommentLikesCount(@Param() commentIdDto: CommentIdDto) {
+    const { commentId } = commentIdDto;
+    const likesCount = await this.likeService.getCommentLikesCount(commentId);
+    return { likesCount };
+  }
+
+  @Get('comment/:commentId/replies')
+  fetchCommentReplies(@Request() req, @Param() commentIdDto: CommentIdDto) {
+    const { commentId } = commentIdDto;
+    return this.commentService.getCommentReplies(commentId);
+  }
 
   @Get('/:postId')
-  getPostById(@Param() postIdDto: PostIdDto) {
+  async getPostById(@Param() postIdDto: PostIdDto) {
     const { postId } = postIdDto;
     return this.postService.getById(postId);
   }
@@ -96,7 +150,23 @@ export class PostController {
     return { postLikesCount: likesCount };
   }
 
-  @Patch('edit-content/:postId')
+  @Get('/:postId/comments')
+  fetchPostComments(@Request() req, @Param() postIdDto: PostIdDto) {
+    const { postId } = postIdDto;
+    return this.commentService.getPostComments(postId);
+  }
+
+  @Patch('comment/:commentId')
+  editComment(
+    @Request() req,
+    @Param() commentIdDto: CommentIdDto,
+    @Body() editCommentDto: CreateCommentDto,
+  ) {
+    const { commentId } = commentIdDto;
+    return this.commentService.edit(req.user._id, commentId, editCommentDto);
+  }
+
+  @Patch('/:postId/edit-content')
   editPostContent(
     @Request() req,
     @Param() postIdDto: PostIdDto,
@@ -110,7 +180,7 @@ export class PostController {
     );
   }
 
-  @Patch('add-images/:postId')
+  @Patch('/:postId/add-images')
   @UseInterceptors(
     FilesInterceptor('images', MAX_IMAGES_COUNT, postImageUploadOptions),
   )
@@ -123,7 +193,7 @@ export class PostController {
     return this.postService.addImages(req.user._id, postId, files);
   }
 
-  @Patch('delete-images/:postId')
+  @Patch('/:postId/delete-images')
   deletePostImages(
     @Request() req,
     @Param() postIdDto: PostIdDto,
@@ -131,6 +201,11 @@ export class PostController {
   ) {
     const { postId } = postIdDto;
     return this.postService.deleteImages(req.user._id, postId, deleteImageDto);
+  }
+
+  @Delete('comment/:commentId')
+  deleteComment(@Request() req, @Param() commentIdDto: CommentIdDto) {
+    return this.commentService.delete(req.user._id, commentIdDto);
   }
 
   @Delete('/:postId')

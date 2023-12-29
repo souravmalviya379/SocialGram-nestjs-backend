@@ -9,13 +9,18 @@ import { Comment } from './schemas/comment.schema';
 import mongoose from 'mongoose';
 import { PostService } from 'src/post/post.service';
 import { CreateCommentDto } from './dtos/create-comment.dto';
-import { CommentIdDto } from 'src/common/dtos/commentId.dto';
+import { CommentIdDto } from './dtos/commentId.dto';
+import { CommentLikes } from './schemas/commentLIkes.schema';
 
 @Injectable()
 export class CommentService {
   constructor(
     @InjectModel(Comment.name)
     private commentModel: mongoose.Model<Comment>,
+
+    @InjectModel(CommentLikes.name)
+    private commentLikesModel: mongoose.Model<CommentLikes>,
+
     private postService: PostService,
   ) {}
 
@@ -227,12 +232,27 @@ export class CommentService {
         );
       }
 
-      await this.commentModel.findByIdAndDelete(commentId);
+      //delete likes associated with comment and its replies
+      await this.commentLikesModel.deleteMany({
+        comment: new mongoose.Types.ObjectId(commentId),
+      });
 
-      //also delete all the replies to the comment if exists
+      const replies = await this.commentModel.find({
+        parentComment: new mongoose.Types.ObjectId(commentId),
+      });
+      const replyIds = replies.map((reply) => {
+        return { comment: reply._id };
+      });
+
+      await this.commentLikesModel.deleteMany({ $or: replyIds });
+
+      //delete all the replies to the comment if exists
       await this.commentModel.deleteMany({
         parentComment: new mongoose.Types.ObjectId(commentId),
       });
+
+      //finally delete comment
+      await this.commentModel.findByIdAndDelete(commentId);
 
       return {
         message: 'Comment and associated replies deleted',

@@ -26,7 +26,7 @@ import { Comment, CommentSchema } from './schemas/comment.schema';
     JwtModule,
   ],
   controllers: [PostController],
-  providers: [PostService],
+  providers: [PostService, LikeService, CommentService],
   exports: [PostService, LikeService, CommentService],
 })
 export class PostModule {}

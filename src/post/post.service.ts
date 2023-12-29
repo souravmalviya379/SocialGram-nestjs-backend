@@ -17,12 +17,25 @@ import removeFile from 'utils/remove-file';
 import { DeletePostImagesDto } from './dtos/delete-postImage.dto';
 import { UserService } from 'src/user/user.service';
 import { PaginationQueryDto } from 'src/common/dtos/paginationQuery.dto';
+import { Comment } from './schemas/comment.schema';
+import { CommentLikes } from './schemas/commentLIkes.schema';
+import { PostLikes } from './schemas/postLikes.schema';
 
 @Injectable()
 export class PostService {
   constructor(
     @InjectModel(Post.name)
     private postModel: mongoose.Model<Post>,
+
+    @InjectModel(Comment.name)
+    private commentModel: mongoose.Model<Comment>,
+
+    @InjectModel(CommentLikes.name)
+    private commentLikesModel: mongoose.Model<CommentLikes>,
+
+    @InjectModel(PostLikes.name)
+    private postLikesModel: mongoose.Model<PostLikes>,
+
     private userService: UserService,
   ) {}
 
@@ -168,7 +181,58 @@ export class PostService {
   }
 
   async getById(postId: mongoose.Types.ObjectId | string) {
-    const post = await this.postModel.findById(postId);
+    const post = await this.postModel.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          pipeline: [{ $project: { name: true, username: true, image: true } }],
+          as: 'user',
+        },
+      },
+      {
+        $lookup: {
+          from: 'postlikes',
+          localField: '_id',
+          foreignField: 'post',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                pipeline: [
+                  { $project: { name: true, username: true, image: true } },
+                ],
+                as: 'user',
+              },
+            },
+          ],
+          as: 'likes',
+        },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: '_id',
+          foreignField: 'post',
+          as: 'comments',
+        },
+      },
+      {
+        $addFields: {
+          totalLikes: { $size: '$likes' },
+          totalComments: { $size: '$comments' },
+          likes: { $slice: ['$likes', 3] },
+          comments: { $slice: ['$comments', 3] },
+        },
+      },
+      {
+        $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+      },
+    ]);
     return post;
   }
 
@@ -360,6 +424,21 @@ export class PostService {
         });
       }
 
+      //delete likes associated with post and its comments
+      await this.postLikesModel.deleteMany({
+        post: new mongoose.Types.ObjectId(postId),
+      });
+
+      await this.commentLikesModel.deleteMany({
+        post: new mongoose.Types.ObjectId(postId),
+      });
+
+      //delete the comments and replies associated with the post
+      await this.commentModel.deleteMany({
+        post: new mongoose.Types.ObjectId(postId),
+      });
+
+      //finally delete post
       await this.postModel.findByIdAndDelete(postId);
 
       return { message: 'Post deleted successfully', deletedPost: post };

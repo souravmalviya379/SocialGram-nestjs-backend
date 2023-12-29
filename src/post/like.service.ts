@@ -199,6 +199,7 @@ export class LikeService {
 
       const commentLike = await this.commentLikesModel.create({
         user: new mongoose.Types.ObjectId(userId),
+        post: new mongoose.Types.ObjectId(existingComment.post._id),
         comment: new mongoose.Types.ObjectId(commentId),
       });
       return { message: 'Like added to comment', commentLike };
