@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { PostService } from 'src/post/post.service';
 import { PaginationQueryDto } from 'src/common/dtos/paginationQuery.dto';
 import { CommentLikes } from './schemas/commentLIkes.schema';
-import { CommentService } from 'src/comment/comment.service';
+import { CommentService } from 'src/post/comment.service';
 
 @Injectable()
 export class LikeService {
@@ -199,6 +199,7 @@ export class LikeService {
 
       const commentLike = await this.commentLikesModel.create({
         user: new mongoose.Types.ObjectId(userId),
+        post: new mongoose.Types.ObjectId(existingComment.post._id),
         comment: new mongoose.Types.ObjectId(commentId),
       });
       return { message: 'Like added to comment', commentLike };
