@@ -14,7 +14,7 @@ export class Post {
   @Prop({ required: true })
   content: string;
 
-  @Prop({ type: [{ type: String }] }) //@Prop([String])
+  @Prop({ type: [{ type: String }], required: true }) //@Prop([String])
   images: string[];
 }
 

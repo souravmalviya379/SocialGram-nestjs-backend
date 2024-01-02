@@ -248,15 +248,21 @@ export class PostService {
         content,
       });
 
-      if (files && files.length) {
-        files.map((file) => {
-          newPost.images.push(`${POST_IMAGE_PATH}/${file.filename}`);
-        });
+      if (!(files && files.length)) {
+        throw new BadRequestException('Post images are required');
       }
+
+      files.map((file) => {
+        newPost.images.push(`${POST_IMAGE_PATH}/${file.filename}`);
+      });
+
       await newPost.save();
       return { message: 'Post created successfully', newPost };
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       } else {
         console.log('Error while creating post : ', error);
