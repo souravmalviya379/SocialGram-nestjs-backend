@@ -9,6 +9,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PostModule } from './post/post.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ChatGateway } from './chat/chat.gateway';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { join } from 'path';
     PostModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ChatGateway],
   exports: [ConfigModule],
 })
 export class AppModule {}

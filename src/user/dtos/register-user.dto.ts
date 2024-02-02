@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   MinLength,
 } from 'class-validator';
 
@@ -25,6 +26,7 @@ export class RegisterUserDto {
   @IsString()
   @Length(3, 20)
   @Transform(({ value }) => value.trim())
+  @Matches(/^\S*$/, { message: 'username must not contain whitespaces' })
   username: string;
 
   @IsOptional()

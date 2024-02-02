@@ -16,7 +16,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwtAuth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { userImageUploadOptions } from 'utils/user-Image-upload.config';
+import { userImageUploadOptions } from 'utils/user-image-upload.config';
 
 @Controller('user')
 export class UserController {

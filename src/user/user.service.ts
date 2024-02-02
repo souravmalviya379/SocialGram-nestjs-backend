@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
 import { RegisterUserDto } from './dtos/register-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import removeFile from 'utils/remove-file';
-import { USER_IMAGE_PATH } from 'utils/user-Image-upload.config';
+import { USER_IMAGE_PATH } from 'utils/user-image-upload.config';
 
 @Injectable()
 export class UserService {
