@@ -31,7 +31,7 @@ export class AuthService {
         username: user.username,
       };
       const accessToken = await this.jwtService.signAsync(payload);
-      return { message: 'Logged in successfully', accessToken };
+      return { message: 'Logged in successfully', user, accessToken };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
